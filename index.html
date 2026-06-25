@@ -1,1 +1,793 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Letter Tap</title>
+<style>
+  @font-face {
+    font-family: 'Oswald';
+    src: local('Oswald');
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #15182B;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+  }
+
+  #root {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 18px 14px 40px;
+  }
+
+  .stage {
+    width: 100%;
+    max-width: 460px;
+    color: #F2E9D8;
+  }
+
+  /* ---------- Top bar: lives + coins ---------- */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .lives {
+    display: flex;
+    gap: 6px;
+  }
+  .life-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #E25C5C;
+    box-shadow: 0 0 8px rgba(226,92,92,0.6);
+    transition: all 0.35s ease;
+  }
+  .life-dot.lost {
+    background: #2A2D42;
+    box-shadow: none;
+    transform: scale(0.7);
+  }
+
+  .coins {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    font-size: 15px;
+    color: #E8A23D;
+    background: rgba(232,162,61,0.1);
+    border: 1px solid rgba(232,162,61,0.35);
+    border-radius: 999px;
+    padding: 5px 12px 5px 8px;
+  }
+  .coin-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #FFE5A8, #E8A23D 60%, #B97A1E);
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .coin-pop {
+    animation: coinPop 0.5s ease;
+  }
+  @keyframes coinPop {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.35); }
+    100% { transform: scale(1); }
+  }
+
+  /* ---------- Scoreboard header ---------- */
+  .scoreboard {
+    background: linear-gradient(180deg, #1D2138, #171A2C);
+    border: 1px solid #2A2D42;
+    border-radius: 16px;
+    padding: 18px 18px 14px;
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .level-tag {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #8A8FB0;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .score-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .letter-card {
+    width: 84px;
+    height: 92px;
+    background: #F2E9D8;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Arial Black', 'Oswald', sans-serif;
+    font-weight: 900;
+    font-size: 52px;
+    color: #15182B;
+    box-shadow: 0 6px 0 #B8915F, 0 8px 14px rgba(0,0,0,0.4);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .letter-card::after {
+    content: '';
+    position: absolute;
+    top: 6px; left: 6px; right: 6px; bottom: 6px;
+    border: 1.5px dashed #15182B22;
+    border-radius: 6px;
+  }
+  .letter-card.flip {
+    animation: flipLetter 0.4s ease;
+  }
+  @keyframes flipLetter {
+    0% { transform: rotateX(0deg); }
+    50% { transform: rotateX(90deg); }
+    100% { transform: rotateX(0deg); }
+  }
+
+  .progress-block {
+    flex: 1;
+  }
+
+  .progress-label {
+    font-size: 13px;
+    color: #8A8FB0;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  .progress-dots {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .pdot {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: #2A2D42;
+    border: 1.5px solid #3A3D58;
+    transition: all 0.25s ease;
+  }
+  .pdot.filled {
+    background: #5FB87A;
+    border-color: #5FB87A;
+    box-shadow: 0 0 8px rgba(95,184,122,0.5);
+  }
+
+  .timer-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .timer-track {
+    flex: 1;
+    height: 8px;
+    background: #2A2D42;
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .timer-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #5FB87A, #E8A23D);
+    border-radius: 99px;
+    transition: width 0.2s linear, background 0.3s ease;
+  }
+  .timer-fill.low {
+    background: #E25C5C;
+  }
+  .timer-num {
+    font-weight: 800;
+    font-size: 15px;
+    min-width: 30px;
+    text-align: right;
+    color: #F2E9D8;
+  }
+
+  .hattrick-row {
+    display: flex;
+    gap: 5px;
+    margin-top: 12px;
+    align-items: center;
+  }
+  .hattrick-label {
+    font-size: 11px;
+    color: #8A8FB0;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-right: 4px;
+    font-weight: 700;
+  }
+  .hat {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid #3A3D58;
+    background: transparent;
+    transition: all 0.3s ease;
+  }
+  .hat.got {
+    background: #E8A23D;
+    border-color: #E8A23D;
+    box-shadow: 0 0 8px rgba(232,162,61,0.5);
+  }
+
+  /* ---------- Paragraph card ---------- */
+  .paper {
+    background: #F2E9D8;
+    color: #2A2418;
+    border-radius: 14px;
+    padding: 20px 18px;
+    font-size: 17px;
+    line-height: 1.85;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+    min-height: 180px;
+  }
+
+  .word {
+    display: inline-block;
+    padding: 1px 3px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  }
+  .word:hover {
+    background: rgba(42,36,24,0.08);
+  }
+  .word.correct {
+    background: #5FB87A;
+    color: #0F2A18;
+    transform: scale(1.04);
+  }
+  .word.wrong {
+    background: #E25C5C;
+    color: #fff;
+    animation: shake 0.3s ease;
+  }
+  .word.disabled {
+    cursor: default;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+
+  /* ---------- Bottom message / control area ---------- */
+  .control-area {
+    margin-top: 16px;
+    text-align: center;
+  }
+
+  .msg {
+    font-size: 15px;
+    color: #8A8FB0;
+    margin-bottom: 10px;
+    min-height: 20px;
+  }
+
+  .btn {
+    border: none;
+    border-radius: 999px;
+    padding: 14px 28px;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    letter-spacing: 0.02em;
+  }
+  .btn:active { transform: scale(0.96); }
+
+  .btn-primary {
+    background: #E8A23D;
+    color: #15182B;
+    box-shadow: 0 6px 0 #B8772A, 0 8px 16px rgba(0,0,0,0.3);
+  }
+  .btn-upgrade {
+    background: #5FB87A;
+    color: #0F2A18;
+    box-shadow: 0 6px 0 #3D8A57, 0 8px 16px rgba(0,0,0,0.3);
+    animation: pulseGlow 1.4s ease infinite;
+  }
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 6px 0 #3D8A57, 0 8px 16px rgba(95,184,122,0.25); }
+    50% { box-shadow: 0 6px 0 #3D8A57, 0 8px 28px rgba(95,184,122,0.55); }
+  }
+  .btn-ghost {
+    background: transparent;
+    color: #8A8FB0;
+    border: 1.5px solid #3A3D58;
+    box-shadow: none;
+  }
+
+  .overlay-card {
+    text-align: center;
+    padding: 30px 20px;
+  }
+  .overlay-title {
+    font-family: 'Arial Black', sans-serif;
+    font-weight: 900;
+    font-size: 28px;
+    margin-bottom: 6px;
+    letter-spacing: 0.02em;
+  }
+  .overlay-sub {
+    font-size: 14px;
+    color: #8A8FB0;
+    margin-bottom: 18px;
+  }
+
+  .footer-note {
+    text-align: center;
+    font-size: 11px;
+    color: #54577A;
+    margin-top: 18px;
+    letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+(function () {
+  // ---------------- Word pool: every word appears once, ever ----------------
+  // Connector words (no letter value, used to glue sentences naturally).
+  var GLUE = ["the","a","an","of","near","while","and","then","as","into","over","under","with","its","their","was","were","along","beside","through","before","after","during","just","that","this"];
+
+  // Large pool of distinct content words, grouped loosely so sentences can be built
+  // alphabet-balanced. No word appears more than once across the whole pool.
+  var POOL = [
+    "amber","ancient","arrow","autumn","alley","acrobat","anchor","apricot","avenue","awning",
+    "bridge","banner","basket","beagle","bakery","breeze","blanket","bramble","buckle","bonfire",
+    "candle","compass","cabin","clover","cottage","crimson","crystal","cypress","carousel","cinder",
+    "dusty","drum","dune","desert","ditch","drizzle","driftwood","dewdrop","doorway","daffodil",
+    "eagle","estuary","engine","echo","ember","emerald","envelope","easel","eclipse","evergreen",
+    "fence","flicker","fountain","feather","forest","frost","falcon","fable","flagstone","firefly",
+    "grove","gravel","greenhouse","glacier","goblet","granite","gondola","garland","gazebo","glimmer",
+    "harbor","hailstorm","hollow","hammock","hedgerow","hearth","horizon","hummingbird","hailpath","hatch",
+    "island","iguana","inkwell","ivy","icicle","inlet","ironwood","ibis","indigo","ingot",
+    "jetty","jungle","jasmine","junction","jade","jigsaw","jubilee","jolt","jackal","journal",
+    "kestrel","kayak","kingdom","kiln","kelp","knoll","kettle","keepsake","kinship","keystone",
+    "lantern","limestone","lagoon","ledge","lichen","lullaby","larkspur","lattice","ledger","loft",
+    "mango","monument","meadow","mossy","mirage","marble","mistwood","minaret","mural","myrtle",
+    "nightingale","nursery","nutmeg","needle","nimbus","nomad","narwhal","nettle","nook","novice",
+    "orchard","otter","obelisk","opal","oasis","oriole","outpost","ornament","overlook","ostrich",
+    "pelican","pier","pebble","pinewood","prairie","puddle","pagoda","parchment","plume","pendant",
+    "quarry","quartz","quail","quay","quilt","quiver","quagmire","quoit","quince","quartzite",
+    "ranger","railway","ridge","raindrop","ravine","rosemary","rampart","rivulet","rustic","ribbon",
+    "sailor","seagull","silver","strait","starlight","spruce","summit","sundial","satchel","saddle",
+    "tailor","tower","tundra","thicket","torrent","trellis","twilight","timber","talisman","tassel",
+    "umbrella","university","unicorn","urn","understory","upland","umpire","utopia","uniform","underpass",
+    "valley","vineyard","vulture","velvet","ventura","violet","voyage","vellum","vortex","vapor",
+    "woodcutter","wanderer","willow","whirlwind","wharf","wisteria","wreath","windmill","wildflower","wayfarer",
+    "yak","yurt","yacht","yearling","yew","yonder","yarrow","yardstick","yeoman","yokel"
+  ];
+
+  var LETTERS = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','y'];
+
+  // Pool used so far this session — emptied/reshuffled only if it runs dry.
+  var usedWords = {};
+
+  function freshPoolWords() {
+    var available = POOL.filter(function (w) { return !usedWords[w]; });
+    if (available.length < 60) {
+      // pool getting low: reset so the game can keep going indefinitely
+      usedWords = {};
+      available = POOL.slice();
+    }
+    return available;
+  }
+
+  function capitalize(w) {
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }
+
+  // Builds one long, never-repeating-word paragraph with guaranteed matches for `letter`.
+  function buildParagraph(letter, need) {
+    var available = freshPoolWords();
+    // shuffle
+    for (var i = available.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = available[i]; available[i] = available[j]; available[j] = tmp;
+    }
+
+    var matches = available.filter(function (w) { return w[0] === letter; });
+    var others = available.filter(function (w) { return w[0] !== letter; });
+
+    // guarantee at least need+2 matching words, plus a big spread of filler words
+    var chosenMatches = matches.slice(0, Math.max(need + 2, Math.min(matches.length, need + 4)));
+    var fillerCount = 55; // big paragraph
+    var chosenOthers = others.slice(0, fillerCount);
+
+    var contentWords = chosenMatches.concat(chosenOthers);
+    // shuffle content words together
+    for (var k = contentWords.length - 1; k > 0; k--) {
+      var l = Math.floor(Math.random() * (k + 1));
+      var t2 = contentWords[k]; contentWords[k] = contentWords[l]; contentWords[l] = t2;
+    }
+
+    // mark these as used so they never repeat in a future paragraph this session
+    contentWords.forEach(function (w) { usedWords[w] = true; });
+
+    // Build sentences of 6-10 content words each, gluing with connector words.
+    var sentences = [];
+    var idx = 0;
+    while (idx < contentWords.length) {
+      var sentLen = 6 + Math.floor(Math.random() * 5);
+      var slice = contentWords.slice(idx, idx + sentLen);
+      idx += sentLen;
+      if (slice.length === 0) break;
+
+      var parts = [];
+      slice.forEach(function (w, si) {
+        if (si === 0) {
+          parts.push(capitalize(GLUE[Math.floor(Math.random() * GLUE.length)]));
+          parts.push(w);
+        } else {
+          if (Math.random() < 0.6) {
+            parts.push(GLUE[Math.floor(Math.random() * GLUE.length)]);
+          }
+          parts.push(w);
+        }
+      });
+      sentences.push(parts.join(' ') + '.');
+    }
+
+    return sentences.join(' ');
+  }
+
+  var LEVELS = [
+    { time: 60, need: 3, title: 'LEVEL 1' },
+    { time: 30, need: 5, title: 'LEVEL 2' },
+    { time: 15, need: 7, title: 'LEVEL 3' }
+  ];
+
+  // ---------------- Game state ----------------
+  var state = {
+    levelIndex: 0,
+    lives: 3,
+    coins: 0,
+    streak: 0,            // consecutive round wins within current level (for hat trick)
+    letter: 'a',
+    paragraphTokens: [],  // array of {text, clean, isWord}
+    foundCount: 0,
+    timeLeft: LEVELS[0].time,
+    timerId: null,
+    roundActive: false,
+    phase: 'intro',       // intro | playing | roundwon | roundlost | upgrade | gameover | finalwin
+    coinPop: false
+  };
+
+  function pickLetter() {
+    return LETTERS[Math.floor(Math.random() * LETTERS.length)];
+  }
+
+  function pickParagraph() {
+    return PARAGRAPHS[Math.floor(Math.random() * PARAGRAPHS.length)];
+  }
+
+  function tokenize(paragraph) {
+    // split keeping punctuation/spaces attached as separate non-word tokens
+    var re = /([A-Za-z']+)|([^A-Za-z']+)/g;
+    var tokens = [];
+    var m;
+    while ((m = re.exec(paragraph)) !== null) {
+      if (m[1]) {
+        tokens.push({ text: m[1], clean: m[1].toLowerCase(), isWord: true, status: 'idle' });
+      } else {
+        tokens.push({ text: m[2], isWord: false });
+      }
+    }
+    return tokens;
+  }
+
+  function startRound() {
+    var lvl = LEVELS[state.levelIndex];
+    var letter = pickLetter();
+    var paragraph = buildParagraph(letter, lvl.need);
+    var tokens = tokenize(paragraph);
+
+    state.letter = letter;
+    state.paragraphTokens = tokens;
+    state.foundCount = 0;
+    state.timeLeft = lvl.time;
+    state.roundActive = true;
+    state.phase = 'playing';
+    state.justFlipped = true;
+
+    clearTimer();
+    state.timerId = setInterval(tick, 100);
+    render();
+  }
+
+  function clearTimer() {
+    if (state.timerId) {
+      clearInterval(state.timerId);
+      state.timerId = null;
+    }
+  }
+
+  function tick() {
+    state.timeLeft = Math.max(0, state.timeLeft - 0.1);
+    if (state.timeLeft <= 0) {
+      clearTimer();
+      loseRound('time');
+      return;
+    }
+    render();
+  }
+
+  function onWordTap(idx) {
+    if (!state.roundActive) return;
+    var tok = state.paragraphTokens[idx];
+    if (!tok.isWord || tok.status !== 'idle') return;
+
+    if (tok.clean[0] === state.letter) {
+      tok.status = 'correct';
+      state.foundCount++;
+      if (state.foundCount >= LEVELS[state.levelIndex].need) {
+        clearTimer();
+        state.roundActive = false;
+        winRound();
+        return;
+      }
+      render();
+    } else {
+      tok.status = 'wrong';
+      state.lives--;
+      render();
+      setTimeout(function () {
+        if (tok.status === 'wrong') tok.status = 'idle';
+        render();
+      }, 350);
+      if (state.lives <= 0) {
+        clearTimer();
+        state.roundActive = false;
+        setTimeout(function () { gameOver(); }, 200);
+      }
+    }
+  }
+
+  function winRound() {
+    state.coins += 10;
+    state.coinPop = true;
+    state.streak++;
+    if (state.streak >= 3) {
+      state.phase = 'upgrade';
+    } else {
+      state.phase = 'roundwon';
+    }
+    render();
+    setTimeout(function () { state.coinPop = false; }, 500);
+  }
+
+  function loseRound(reason) {
+    state.roundActive = false;
+    state.lives--;
+    if (state.lives <= 0) {
+      gameOver();
+    } else {
+      state.streak = 0;
+      state.phase = 'roundlost';
+      render();
+    }
+  }
+
+  function gameOver() {
+    state.phase = 'gameover';
+    render();
+  }
+
+  function nextRound() {
+    state.phase = 'playing';
+    startRound();
+  }
+
+  function acceptUpgrade() {
+    state.streak = 0;
+    if (state.levelIndex < LEVELS.length - 1) {
+      state.levelIndex++;
+      startRound();
+    } else {
+      state.phase = 'finalwin';
+      render();
+    }
+  }
+
+  function declineUpgrade() {
+    state.streak = 0;
+    state.phase = 'roundwon';
+    render();
+  }
+
+  function restartGame() {
+    clearTimer();
+    state.levelIndex = 0;
+    state.lives = 3;
+    state.coins = 0;
+    state.streak = 0;
+    state.phase = 'intro';
+    render();
+  }
+
+  // ---------------- Render ----------------
+  var root = document.getElementById('root');
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function render() {
+    var lvl = LEVELS[state.levelIndex];
+    var html = '';
+
+    html += '<div class="stage">';
+
+    // top bar
+    html += '<div class="topbar">';
+    html += '<div class="lives">';
+    for (var i = 0; i < 3; i++) {
+      html += '<div class="life-dot' + (i >= state.lives ? ' lost' : '') + '"></div>';
+    }
+    html += '</div>';
+    html += '<div class="coins' + (state.coinPop ? ' coin-pop' : '') + '"><span class="coin-icon"></span>' + state.coins + '</div>';
+    html += '</div>';
+
+    if (state.phase === 'intro') {
+      html += introCard();
+    } else if (state.phase === 'gameover') {
+      html += gameOverCard();
+    } else if (state.phase === 'finalwin') {
+      html += finalWinCard();
+    } else {
+      // scoreboard
+      html += '<div class="scoreboard">';
+      html += '<div class="level-tag">' + lvl.title + ' &middot; FIND WORDS STARTING WITH</div>';
+      html += '<div class="score-row">';
+      html += '<div class="letter-card' + (state.justFlipped ? ' flip' : '') + '">' + state.letter.toUpperCase() + '</div>';
+      html += '<div class="progress-block">';
+      html += '<div class="progress-label">' + state.foundCount + ' / ' + lvl.need + ' words found</div>';
+      html += '<div class="progress-dots">';
+      for (var p = 0; p < lvl.need; p++) {
+        html += '<div class="pdot' + (p < state.foundCount ? ' filled' : '') + '"></div>';
+      }
+      html += '</div>';
+      var pct = Math.max(0, state.timeLeft / lvl.time) * 100;
+      var low = state.timeLeft <= lvl.time * 0.25;
+      html += '<div class="timer-row">';
+      html += '<div class="timer-track"><div class="timer-fill' + (low ? ' low' : '') + '" style="width:' + pct + '%"></div></div>';
+      html += '<div class="timer-num">' + Math.ceil(state.timeLeft) + 's</div>';
+      html += '</div>';
+      html += '</div>'; // progress-block
+      html += '</div>'; // score-row
+
+      html += '<div class="hattrick-row">';
+      html += '<span class="hattrick-label">Hat trick</span>';
+      for (var h = 0; h < 3; h++) {
+        html += '<div class="hat' + (h < state.streak ? ' got' : '') + '"></div>';
+      }
+      html += '</div>';
+      html += '</div>'; // scoreboard
+
+      // paragraph
+      html += '<div class="paper">';
+      state.paragraphTokens.forEach(function (tok, idx) {
+        if (!tok.isWord) {
+          html += esc(tok.text);
+        } else {
+          var cls = 'word';
+          if (tok.status === 'correct') cls += ' correct disabled';
+          else if (tok.status === 'wrong') cls += ' wrong';
+          html += '<span class="' + cls + '" data-idx="' + idx + '">' + esc(tok.text) + '</span>';
+        }
+      });
+      html += '</div>';
+
+      // control area for round end states
+      html += '<div class="control-area">';
+      if (state.phase === 'roundwon') {
+        html += '<div class="msg">Nice! Hat trick streak: ' + state.streak + ' / 3 &middot; +10 coins</div>';
+        html += '<button class="btn btn-primary" id="btnNext">Next round</button>';
+      } else if (state.phase === 'roundlost') {
+        html += '<div class="msg">Time\'s up. Streak reset. Lives left: ' + state.lives + '</div>';
+        html += '<button class="btn btn-primary" id="btnNext">Try again</button>';
+      } else if (state.phase === 'upgrade') {
+        var isLast = state.levelIndex === LEVELS.length - 1;
+        html += '<div class="msg">Hat trick! +10 coins. ' + (isLast ? 'You\'ve mastered the final level.' : 'Upgrade available.') + '</div>';
+        if (isLast) {
+          html += '<button class="btn btn-upgrade" id="btnUpgrade">Finish the game</button>';
+        } else {
+          var nxt = LEVELS[state.levelIndex + 1];
+          html += '<button class="btn btn-upgrade" id="btnUpgrade">Upgrade &mdash; ' + nxt.time + 's, ' + nxt.need + ' words</button>';
+          html += '<div style="height:8px"></div>';
+          html += '<button class="btn btn-ghost" id="btnDecline">Stay on this level</button>';
+        }
+      }
+      html += '</div>';
+    }
+
+    html += '<div class="footer-note">TAP A WORD IN THE TEXT THAT STARTS WITH THE LETTER SHOWN</div>';
+    html += '</div>'; // stage
+
+    root.innerHTML = html;
+    attachHandlers();
+    state.justFlipped = false;
+  }
+
+  function introCard() {
+    var html = '<div class="scoreboard overlay-card">';
+    html += '<div class="overlay-title">LETTER TAP</div>';
+    html += '<div class="overlay-sub">A letter is called. Tap matching words in the text before time runs out.<br>3 lives. Win 3 rounds in a row to upgrade to a harder level.</div>';
+    html += '<button class="btn btn-primary" id="btnStart">Start game</button>';
+    html += '</div>';
+    return html;
+  }
+
+  function gameOverCard() {
+    var html = '<div class="scoreboard overlay-card">';
+    html += '<div class="overlay-title" style="color:#E25C5C">GAME OVER</div>';
+    html += '<div class="overlay-sub">You ran out of lives.<br>Total coins earned: ' + state.coins + '</div>';
+    html += '<button class="btn btn-primary" id="btnRestart">Play again</button>';
+    html += '</div>';
+    return html;
+  }
+
+  function finalWinCard() {
+    var html = '<div class="scoreboard overlay-card">';
+    html += '<div class="overlay-title" style="color:#5FB87A">CHAMPION!</div>';
+    html += '<div class="overlay-sub">You hat-tricked every level, all the way to 15 seconds and 7 words.<br>Total coins earned: ' + state.coins + '</div>';
+    html += '<button class="btn btn-primary" id="btnRestart">Play again</button>';
+    html += '</div>';
+    return html;
+  }
+
+  function attachHandlers() {
+    var words = root.querySelectorAll('.word[data-idx]');
+    words.forEach(function (el) {
+      el.addEventListener('click', function () {
+        onWordTap(parseInt(el.getAttribute('data-idx'), 10));
+      });
+    });
+    var btnStart = document.getElementById('btnStart');
+    if (btnStart) btnStart.addEventListener('click', startRound);
+    var btnNext = document.getElementById('btnNext');
+    if (btnNext) btnNext.addEventListener('click', nextRound);
+    var btnUpgrade = document.getElementById('btnUpgrade');
+    if (btnUpgrade) btnUpgrade.addEventListener('click', acceptUpgrade);
+    var btnDecline = document.getElementById('btnDecline');
+    if (btnDecline) btnDecline.addEventListener('click', declineUpgrade);
+    var btnRestart = document.getElementById('btnRestart');
+    if (btnRestart) btnRestart.addEventListener('click', restartGame);
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
